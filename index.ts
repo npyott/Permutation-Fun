@@ -103,20 +103,18 @@ const factorialComponents = (i: number, n: number): number[] => {
 
 const permutations = function* <T>(list: T[], order: PermutationOrder) {
     const n = list.length;
-    const fact = factorial(n);
 
-    const indices = new Array(fact).fill(0).map(
-        (_, i) => i,
-    ).sort((a, b) => {
+    const indices = (() => {
         switch (order) {
             case "ascending":
-                return -1;
+                return ascendingPermutationIndices(n);
             case "descending":
-                return 1;
+                return descendingPermutationIndices(n);
             case "random":
-                return Math.round(Math.random() - 1);
+                return randomPermutationIndices(n);
         }
-    });
+    })();
+
     for (const i of indices) {
         const parts = factorialComponents(i, n);
 
