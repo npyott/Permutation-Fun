@@ -38,27 +38,6 @@ const coprimeNumbers = function* (
     }
 };
 
-/**
- * Represent a number i (between 0 and n! - 1) in n-factorial notation.
- * Given by i = n * q + r,
- * where r is the component and we recurse on q now between 0 and (n - 1)!.
- */
-const factorialComponents = (i: number, n: number): number[] => {
-    if (n === 1) {
-        return [0];
-    }
-
-    const finalComponent = i % n;
-
-    const subComponents = factorialComponents(
-        Math.floor(i / n),
-        n - 1,
-    );
-
-    subComponents.push(finalComponent);
-    return subComponents;
-};
-
 type PermutationOrder =
     | "ascending"
     | "descending"
@@ -97,6 +76,29 @@ const randomPermutationIndices = function* (n: number) {
     for (let i = 0; i < fact; ++i) {
         yield (increment * (i + start)) % fact;
     }
+};
+
+/**
+ * Represent a number i (between 0 and n! - 1) in n-factorial notation.
+ * Given by i = n * q + r,
+ * where r is the component and we recurse on q now between 0 and (n - 1)!.
+ * The result is a list of numbers [r1, ..., rn] such that 0 <= ri < i,
+ * which bijects {0, ..., n! - 1} to {0} x {0, 1} x ... x {0, ..., n - 1}
+ */
+const factorialComponents = (i: number, n: number): number[] => {
+    if (n === 1) {
+        return [0];
+    }
+
+    const finalComponent = i % n;
+
+    const subComponents = factorialComponents(
+        Math.floor(i / n),
+        n - 1,
+    );
+
+    subComponents.push(finalComponent);
+    return subComponents;
 };
 
 const permutations = function* <T>(list: T[], order: PermutationOrder) {
