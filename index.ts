@@ -8,7 +8,7 @@ const factorial = (n: number): number => {
 
 const gcd = (a: number, b: number, normalized = false): number => {
     if (!normalized) {
-        a = Math.floor(Math.round(a));
+        a = Math.floor(Math.abs(a));
         b = Math.floor(Math.abs(b));
         a = Math.max(a, b);
         b = Math.min(a, b);
