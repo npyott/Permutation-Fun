@@ -1,24 +1,25 @@
-const factorial = (n: number): number => {
+const factorial = (n: number): bigint => {
     if (n === 0 || n === 1) {
-        return 1;
+        return 1n;
     }
 
-    return factorial(n - 1) * n;
+    return factorial(n - 1) * BigInt(n);
 };
 
-const gcd = (a: number, b: number, normalized = false): number => {
+const gcd = (a: bigint, b: bigint, normalized = false): bigint => {
     if (!normalized) {
-        a = Math.floor(Math.abs(a));
-        b = Math.floor(Math.abs(b));
-        a = Math.max(a, b);
-        b = Math.min(a, b);
+        // absolute value
+        a = a < 0n ? -a : a;
+        b = b < 0n ? -b : b;
+        // Force a as max and b as min
+        [a, b] = a < b ? [b, a] : [a, b];
     }
 
-    if (a === 0) {
+    if (a === 0n) {
         return b;
     }
 
-    if (b === 0) {
+    if (b === 0n) {
         return a;
     }
 
@@ -26,13 +27,13 @@ const gcd = (a: number, b: number, normalized = false): number => {
 };
 
 const coprimeNumbers = function* (
-    n: number,
-    max: number = n
-): Generator<number> {
-    for (let i = 1; i < max; ++i) {
+    n: bigint,
+    max: bigint = n
+): Generator<bigint> {
+    for (let i = 1n; i < max; ++i) {
         const d = gcd(n, i);
 
-        if (d === 1) {
+        if (d === 1n) {
             yield i;
         }
     }
@@ -42,35 +43,57 @@ type PermutationOrder = "ascending" | "descending" | "random";
 
 const ascendingPermutationIndices = function* (n: number) {
     const fact = factorial(n);
-    for (let i = fact - 1; i >= 0; --i) {
+    for (let i = fact - 1n; i >= 0; --i) {
         yield i;
     }
 };
 
 const descendingPermutationIndices = function* (n: number) {
     const fact = factorial(n);
-    for (let i = 0; i < fact; ++i) {
+    for (let i = 0n; i < fact; ++i) {
         yield i;
     }
+};
+
+const randomBigInt = (max: bigint, depth = 0): bigint => {
+    max = max < 0n ? 0n : max;
+
+    const base16MaxRaw = max.toString(16);
+    const base16MaxPadded =
+        base16MaxRaw.length % 2 === 0 ? base16MaxRaw : "0" + base16MaxRaw;
+
+    const randomRestBytes = new Uint8Array(base16MaxPadded.length / 2);
+    crypto.getRandomValues(randomRestBytes);
+
+    const leadByte = parseInt(base16MaxPadded.slice(0, 2), 16);
+    const randomLeadByte = Math.floor(Math.random() * leadByte);
+
+    const randomString = [randomLeadByte, ...randomRestBytes]
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
+
+    return BigInt(`0x${randomString}`);
 };
 
 const randomPermutationIndices = function* (n: number) {
     const fact = factorial(n);
 
-    let increment = 1;
-    let seen = 1;
-    for (const i of coprimeNumbers(n)) {
-        const swap = Math.random() < 1 / seen;
+    let increment = 1n;
+    let seen = 1n;
+    for (const i of coprimeNumbers(fact)) {
+        const swap = randomBigInt(seen) === 0n;
         if (swap) {
             increment = i;
         }
     }
 
-    const start = Math.floor(Math.random() * fact);
+    const start = randomBigInt(fact);
 
-    for (let i = 0; i < fact; ++i) {
-        yield (increment * (i + start)) % fact;
-    }
+    let current = start;
+    do {
+        yield current;
+        current = (current + increment) % fact;
+    } while (current !== start);
 };
 
 /**
@@ -80,16 +103,21 @@ const randomPermutationIndices = function* (n: number) {
  * The result is a list of numbers [r1, ..., rn] such that 0 <= ri < i,
  * which bijects {0, ..., n! - 1} to {0} x {0, 1} x ... x {0, ..., n - 1}
  */
-const factorialComponents = (i: number, n: number): number[] => {
+const factorialComponents = (i: bigint, n: number): number[] => {
+    if (n === 0) {
+        return [];
+    }
+
     if (n === 1) {
         return [0];
     }
 
-    const finalComponent = i % n;
+    const nb = BigInt(n);
+    const finalComponent = i % nb;
 
-    const subComponents = factorialComponents(Math.floor(i / n), n - 1);
+    const subComponents = factorialComponents(i / nb, n - 1);
 
-    subComponents.push(finalComponent);
+    subComponents.push(parseInt(finalComponent.toString()));
     return subComponents;
 };
 
