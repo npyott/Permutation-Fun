@@ -27,7 +27,7 @@ const gcd = (a: number, b: number, normalized = false): number => {
 
 const coprimeNumbers = function* (
     n: number,
-    max: number = n,
+    max: number = n
 ): Generator<number> {
     for (let i = 1; i < max; ++i) {
         const d = gcd(n, i);
@@ -38,10 +38,7 @@ const coprimeNumbers = function* (
     }
 };
 
-type PermutationOrder =
-    | "ascending"
-    | "descending"
-    | "random";
+type PermutationOrder = "ascending" | "descending" | "random";
 
 const ascendingPermutationIndices = function* (n: number) {
     const fact = factorial(n);
@@ -69,9 +66,7 @@ const randomPermutationIndices = function* (n: number) {
         }
     }
 
-    const start = Math.floor(
-        Math.random() * fact,
-    );
+    const start = Math.floor(Math.random() * fact);
 
     for (let i = 0; i < fact; ++i) {
         yield (increment * (i + start)) % fact;
@@ -92,13 +87,24 @@ const factorialComponents = (i: number, n: number): number[] => {
 
     const finalComponent = i % n;
 
-    const subComponents = factorialComponents(
-        Math.floor(i / n),
-        n - 1,
-    );
+    const subComponents = factorialComponents(Math.floor(i / n), n - 1);
 
     subComponents.push(finalComponent);
     return subComponents;
+};
+
+/**
+ *
+ * @param components From the set {0} x {0, 1} x ... x {0, ..., n - 1}
+ * @returns Permutation of {0, ..., n - 1} represented as an array
+ */
+const factorialComponentsToPermutation = (components: number[]): number[] => {
+    const permutation: number[] = [];
+    for (const [j, insertionIndex] of components.entries()) {
+        permutation.splice(insertionIndex, 0, j);
+    }
+
+    return permutation;
 };
 
 const permutations = function* <T>(list: T[], order: PermutationOrder) {
@@ -116,13 +122,8 @@ const permutations = function* <T>(list: T[], order: PermutationOrder) {
     })();
 
     for (const i of indices) {
-        const parts = factorialComponents(i, n);
-
-        const permutation: number[] = [];
-        for (const [j, insertionIndex] of parts.entries()) {
-            permutation.splice(insertionIndex, 0, j);
-        }
-
+        const components = factorialComponents(i, n);
+        const permutation = factorialComponentsToPermutation(components);
         yield permutation.map((j) => list[j]);
     }
 };
