@@ -6,39 +6,6 @@ const factorial = (n: number): bigint => {
     return factorial(n - 1) * BigInt(n);
 };
 
-const gcd = (a: bigint, b: bigint, normalized = false): bigint => {
-    if (!normalized) {
-        // absolute value
-        a = a < 0n ? -a : a;
-        b = b < 0n ? -b : b;
-        // Force a as max and b as min
-        [a, b] = a < b ? [b, a] : [a, b];
-    }
-
-    if (a === 0n) {
-        return b;
-    }
-
-    if (b === 0n) {
-        return a;
-    }
-
-    return gcd(b, a % b, true);
-};
-
-const coprimeNumbers = function* (
-    n: bigint,
-    max: bigint = n
-): Generator<bigint> {
-    for (let i = 1n; i < max; ++i) {
-        const d = gcd(n, i);
-
-        if (d === 1n) {
-            yield i;
-        }
-    }
-};
-
 type PermutationOrder = "ascending" | "descending" | "random";
 
 const ascendingPermutationIndices = function* (n: number) {
@@ -55,45 +22,70 @@ const descendingPermutationIndices = function* (n: number) {
     }
 };
 
-const randomBigInt = (max: bigint, depth = 0): bigint => {
+const randomBigInt = (max: bigint): bigint => {
     max = max < 0n ? 0n : max;
 
-    const base16MaxRaw = max.toString(16);
-    const base16MaxPadded =
-        base16MaxRaw.length % 2 === 0 ? base16MaxRaw : "0" + base16MaxRaw;
+    if (max <= Number.MAX_SAFE_INTEGER) {
+        const rand = Math.floor(Math.random() * Number(max));
+        return BigInt(rand);
+    }
 
-    const randomRestBytes = new Uint8Array(base16MaxPadded.length / 2);
-    crypto.getRandomValues(randomRestBytes);
+    const useUpperRange = Math.round(Math.random());
+    const half = max >> 1n;
 
-    const leadByte = parseInt(base16MaxPadded.slice(0, 2), 16);
-    const randomLeadByte = Math.floor(Math.random() * leadByte);
+    if (useUpperRange) {
+        const remainder = max & 1n;
+        return half + remainder + randomBigInt(half);
+    }
 
-    const randomString = [randomLeadByte, ...randomRestBytes]
-        .map((byte) => byte.toString(16).padStart(2, "0"))
-        .join("");
+    return randomBigInt(half);
+};
 
-    return BigInt(`0x${randomString}`);
+const gcd = (a: bigint, b: bigint): bigint => {
+    // absolute value
+    a = a < 0n ? -a : a;
+    b = b < 0n ? -b : b;
+    // Force a as max and b as min
+    [a, b] = a < b ? [b, a] : [a, b];
+
+    while (b > 0n) {
+        [a, b] = [b, a % b];
+    }
+
+    return a;
+};
+
+/**
+ * Permutation function of {0, ..., n - 1} by cycling values and then
+ * cycling based upon gcd classes recursively.
+ */
+const looselyRandomPermutation = (
+    i: bigint,
+    n: bigint,
+    seed: bigint
+): bigint => {
+    const cycled = (i + seed) % n;
+    const d = gcd(n, cycled);
+
+    if (d === 1n) {
+        return cycled;
+    }
+
+    const reduced = cycled / d;
+    const reducedRange = n / d;
+
+    return (
+        d * looselyRandomPermutation(reduced, reducedRange, seed % reducedRange)
+    );
 };
 
 const randomPermutationIndices = function* (n: number) {
     const fact = factorial(n);
+    const seed = randomBigInt(fact);
 
-    let increment = 1n;
-    let seen = 1n;
-    for (const i of coprimeNumbers(fact)) {
-        const swap = randomBigInt(seen) === 0n;
-        if (swap) {
-            increment = i;
-        }
+    for (let i = 0n; i < fact; ++i) {
+        yield looselyRandomPermutation(i, fact, seed);
     }
-
-    const start = randomBigInt(fact);
-
-    let current = start;
-    do {
-        yield current;
-        current = (current + increment) % fact;
-    } while (current !== start);
 };
 
 /**
@@ -122,7 +114,6 @@ const factorialComponents = (i: bigint, n: number): number[] => {
 };
 
 /**
- *
  * @param components From the set {0} x {0, 1} x ... x {0, ..., n - 1}
  * @returns Permutation of {0, ..., n - 1} represented as an array
  */
@@ -135,7 +126,7 @@ const factorialComponentsToPermutation = (components: number[]): number[] => {
     return permutation;
 };
 
-const permutations = function* <T>(list: T[], order: PermutationOrder) {
+export const permutations = function* <T>(list: T[], order: PermutationOrder) {
     const n = list.length;
 
     const indices = (() => {
